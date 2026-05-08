@@ -1,7 +1,7 @@
 import { test, expect } from '../../fixtures';
 
 test.describe('Brand Kits', () => {
-  test('Brand Kit creation, customization, saving and application to Doc Editor, Template Editor, Module Editor', async ({ brandKitPage }) => {
+  test('Brand Kit Creation and Application Across Editors', async ({ brandKitPage }) => {
     test.setTimeout(process.env.CI ? 180_000 : 90_000);
 
     await test.step('Navigate to Brand Kits and open the editor', async () => {
