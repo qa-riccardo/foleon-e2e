@@ -141,7 +141,7 @@ jobs:
 
           const skipped = r.suites.flatMap(s => s.tests).filter(t => t.status === 'skipped').length;
           const resultEmoji = r.failed === 0 ? '✅' : '❌';
-          const resultLabel = r.failed === 0 ? 'SUCCESS' : 'FAILURE';
+          const resultLabel = r.failed === 0 ? 'READY TO RELEASE' : 'FAILURE';
           const shortSha = (process.env.COMMIT_SHA || '').slice(0, 7);
 
           const statsLine = `✅ *${r.passed}/${r.total} passed* • ❌ *${r.failed} failed* • ⏭️ *${skipped} skipped* • ⏱️ *${dur}*`;
