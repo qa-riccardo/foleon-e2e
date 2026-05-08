@@ -3,7 +3,7 @@ import { LoginPage } from '../../pages/login.page';
 
 const AUTH_FILE = '.auth/user.json';
 
-setup('authenticate', async ({ page }) => {
+setup('Authenticate', async ({ page }) => {
   const email = process.env.USER_EMAIL;
   const password = process.env.USER_PASSWORD;
 
