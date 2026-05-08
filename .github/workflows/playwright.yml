@@ -58,19 +58,11 @@ jobs:
           path: test-results/
           retention-days: 7
 
-      - name: Deploy report to GitHub Pages
-        if: always()
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./custom-report
-
       - name: Build Slack payload
         if: always()
         env:
           RUN_NUMBER: ${{ github.run_number }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          REPORT_URL: https://qa-riccardo.github.io/foleon-e2e/
           BRANCH: ${{ github.ref_name }}
         run: |
           cat > build-payload.js << 'JSEOF'
@@ -126,12 +118,7 @@ jobs:
                   {
                     type: 'button',
                     style: 'primary',
-                    text: { type: 'plain_text', text: 'View Report →' },
-                    url: process.env.REPORT_URL
-                  },
-                  {
-                    type: 'button',
-                    text: { type: 'plain_text', text: 'View Run →' },
+                    text: { type: 'plain_text', text: 'View Run & Report →' },
                     url: process.env.RUN_URL
                   }
                 ]
