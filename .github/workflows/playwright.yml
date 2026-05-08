@@ -1,44 +1,59 @@
-import { defineConfig, devices } from '@playwright/test';
-import * as dotenv from 'dotenv';
+name: Playwright E2E Tests
 
-dotenv.config();
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
-const BASE_URL = process.env.BASE_URL ?? 'https://app.foleon.com';
-const AUTH_FILE = '.auth/user.json';
+jobs:
+  test:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
-export default defineConfig({
-  testDir: './tests',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [
-    ['list'],
-    ['html', { open: 'never', outputFolder: 'playwright-report' }],
-    ['./reporters/html-reporter.ts', { outputFile: 'custom-report/index.html' }],
-  ],
+    steps:
+      - uses: actions/checkout@v4
 
-  use: {
-    baseURL: BASE_URL,
-    trace: 'on',
-    screenshot: 'on',
-    video: 'on',
-    actionTimeout: process.env.CI ? 30_000 : 15_000,
-    navigationTimeout: process.env.CI ? 60_000 : 30_000,
-  },
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
 
-  projects: [
-    {
-      name: 'setup',
-      testMatch: /.*\.setup\.ts/,
-    },
-    {
-      name: 'chromium',
-      dependencies: ['setup'],
-      use: {
-        ...devices['Desktop Chrome'],
-        storageState: AUTH_FILE,
-      },
-    },
-  ],
-});
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run tests
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          USER_EMAIL: ${{ secrets.USER_EMAIL }}
+          USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
+        run: npm test
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload custom report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-report-${{ github.run_number }}
+          path: custom-report/
+          retention-days: 30
+
+      - name: Upload test results (traces & videos)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_number }}
+          path: test-results/
+          retention-days: 7
