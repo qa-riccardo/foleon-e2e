@@ -11,7 +11,7 @@ jobs:
   test:
     name: E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -58,23 +58,91 @@ jobs:
           path: test-results/
           retention-days: 7
 
-      - name: Parse test results
+      - name: Deploy report to GitHub Pages
         if: always()
-        id: results
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./custom-report
+
+      - name: Build Slack payload
+        if: always()
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPORT_URL: https://qa-riccardo.github.io/foleon-e2e/
+          BRANCH: ${{ github.ref_name }}
         run: |
-          node -e "
+          cat > build-payload.js << 'JSEOF'
           const fs = require('fs');
           const dir = 'custom-report/runs';
           if (!fs.existsSync(dir)) process.exit(0);
-          const files = fs.readdirSync(dir).filter(f => f.endsWith('.json') && !f.startsWith('.')).sort().reverse();
+          const files = fs.readdirSync(dir)
+            .filter(f => f.endsWith('.json') && !f.startsWith('.'))
+            .sort().reverse();
           if (!files.length) process.exit(0);
+
           const r = JSON.parse(fs.readFileSync(dir + '/' + files[0], 'utf8'));
           const m = Math.floor(r.duration / 60000);
           const s = Math.round((r.duration % 60000) / 1000);
-          const dur = m > 0 ? m + 'm ' + s + 's' : s + 's';
-          const out = 'TOTAL=' + r.total + '\nPASSED=' + r.passed + '\nFAILED=' + r.failed + '\nDURATION=' + dur + '\nSTATUS=' + r.status;
-          require('fs').appendFileSync(process.env.GITHUB_OUTPUT, out + '\n');
-          "
+          const dur = m > 0 ? `${m}m ${s}s` : `${s}s`;
+
+          const tests = r.suites.flatMap(suite => suite.tests.map(t => {
+            const emoji = t.status === 'passed' ? '✅' : t.status === 'skipped' ? '⏭' : '❌';
+            const tm = Math.floor(t.duration / 60000);
+            const ts = Math.round((t.duration % 60000) / 1000);
+            const tdur = tm > 0 ? `${tm}m ${ts}s` : `${ts}s`;
+            const title = t.title.length > 72 ? t.title.slice(0, 69) + '...' : t.title;
+            return `${emoji} ${title}  \`${tdur}\``;
+          }));
+
+          const resultEmoji = r.failed === 0 ? '✅' : '❌';
+          const resultTitle = r.failed === 0 ? 'All tests passed' : `${r.failed} test(s) failed`;
+
+          const payload = {
+            blocks: [
+              {
+                type: 'header',
+                text: { type: 'plain_text', text: `${resultEmoji} Foleon E2E — Run #${process.env.RUN_NUMBER}` }
+              },
+              {
+                type: 'section',
+                fields: [
+                  { type: 'mrkdwn', text: `*Result*\n${resultTitle}` },
+                  { type: 'mrkdwn', text: `*Duration*\n${dur}` },
+                  { type: 'mrkdwn', text: `*Passed*\n${r.passed} / ${r.total}` },
+                  { type: 'mrkdwn', text: `*Branch*\n${process.env.BRANCH}` },
+                ]
+              },
+              { type: 'divider' },
+              {
+                type: 'section',
+                text: { type: 'mrkdwn', text: '*Test Results*\n' + tests.join('\n') }
+              },
+              { type: 'divider' },
+              {
+                type: 'actions',
+                elements: [
+                  {
+                    type: 'button',
+                    style: 'primary',
+                    text: { type: 'plain_text', text: 'View Report →' },
+                    url: process.env.REPORT_URL
+                  },
+                  {
+                    type: 'button',
+                    text: { type: 'plain_text', text: 'View Run →' },
+                    url: process.env.RUN_URL
+                  }
+                ]
+              }
+            ]
+          };
+
+          fs.writeFileSync('slack-payload.json', JSON.stringify(payload));
+          console.log('Slack payload built successfully');
+          JSEOF
+          node build-payload.js
 
       - name: Notify Slack
         if: always()
@@ -82,48 +150,14 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           if [ -z "$SLACK_WEBHOOK_URL" ]; then
-            echo "SLACK_WEBHOOK_URL secret not set — skipping notification"
+            echo "SLACK_WEBHOOK_URL not set — skipping"
             exit 0
           fi
-
-          FAILED="${{ steps.results.outputs.FAILED }}"
-          PASSED="${{ steps.results.outputs.PASSED }}"
-          TOTAL="${{ steps.results.outputs.TOTAL }}"
-          DURATION="${{ steps.results.outputs.DURATION }}"
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          if [ "$FAILED" = "0" ]; then
-            EMOJI="✅"; TITLE="All tests passed"
-          else
-            EMOJI="❌"; TITLE="${FAILED} test(s) failed"
+          if [ ! -f slack-payload.json ]; then
+            echo "No payload file — skipping"
+            exit 0
           fi
-
-          echo "Sending Slack notification... PASSED=$PASSED FAILED=$FAILED TOTAL=$TOTAL DURATION=$DURATION"
-
+          echo "Sending Slack notification..."
           curl -f -X POST "$SLACK_WEBHOOK_URL" \
             -H 'Content-type: application/json' \
-            --data "{
-              \"blocks\": [
-                {
-                  \"type\": \"header\",
-                  \"text\": { \"type\": \"plain_text\", \"text\": \"$EMOJI Foleon E2E — Run #${{ github.run_number }}\" }
-                },
-                {
-                  \"type\": \"section\",
-                  \"fields\": [
-                    { \"type\": \"mrkdwn\", \"text\": \"*Result*\n${TITLE}\" },
-                    { \"type\": \"mrkdwn\", \"text\": \"*Duration*\n${DURATION}\" },
-                    { \"type\": \"mrkdwn\", \"text\": \"*Passed*\n${PASSED} / ${TOTAL}\" },
-                    { \"type\": \"mrkdwn\", \"text\": \"*Branch*\n${{ github.ref_name }}\" }
-                  ]
-                },
-                {
-                  \"type\": \"actions\",
-                  \"elements\": [{
-                    \"type\": \"button\",
-                    \"text\": { \"type\": \"plain_text\", \"text\": \"View Run →\" },
-                    \"url\": \"${RUN_URL}\"
-                  }]
-                }
-              ]
-            }"
+            --data @slack-payload.json
