@@ -23,8 +23,8 @@ export default defineConfig({
     trace: 'on',
     screenshot: 'on',
     video: 'on',
-    actionTimeout: 15_000,
-    navigationTimeout: 30_000,
+    actionTimeout: process.env.CI ? 30_000 : 15_000,
+    navigationTimeout: process.env.CI ? 60_000 : 30_000,
   },
 
   projects: [
