@@ -71,36 +71,48 @@ jobs:
           if (!files.length) process.exit(0);
 
           const r = JSON.parse(fs.readFileSync(dir + '/' + files[0], 'utf8'));
+          const allTests = r.suites.flatMap(s => s.tests);
+          const skipped = allTests.filter(t => t.status === 'skipped').length;
+          const passRate = r.total ? Math.round((r.passed / r.total) * 100) : 0;
           const m = Math.floor(r.duration / 60000);
           const s = Math.round((r.duration % 60000) / 1000);
           const dur = m > 0 ? `${m}m ${s}s` : `${s}s`;
+          const titleEmoji = r.failed === 0 ? '✅' : '❌';
 
-          const statusEmoji = r.failed === 0 ? '✅' : '❌';
-          const lines = [
-            `## ${statusEmoji} Foleon E2E — Run Results`,
-            '',
-            `| | |`,
-            `|---|---|`,
-            `| **Result** | ${r.failed === 0 ? '✅ All tests passed' : `❌ ${r.failed} failed`} |`,
-            `| **Passed** | ${r.passed} / ${r.total} |`,
-            `| **Duration** | ${dur} |`,
-            '',
-            '### Tests',
-            '',
-          ];
+          const rows = allTests.map(t => {
+            const emoji = t.status === 'passed' ? '✅' : t.status === 'skipped' ? '⏭️' : '❌';
+            const tm = Math.floor(t.duration / 60000);
+            const ts = Math.round((t.duration % 60000) / 1000);
+            const tdur = tm > 0 ? `${tm}m ${ts}s` : `${ts}s`;
+            const error = t.error ? `<br/><sub>${t.error.split('\n')[0].slice(0, 120).replace(/</g,'&lt;')}</sub>` : '';
+            return `<tr><td align="center">${emoji}</td><td>${t.title}${error}</td><td align="right"><code>${tdur}</code></td></tr>`;
+          }).join('\n');
 
-          for (const suite of r.suites) {
-            for (const t of suite.tests) {
-              const emoji = t.status === 'passed' ? '✅' : t.status === 'skipped' ? '⏭' : '❌';
-              const tm = Math.floor(t.duration / 60000);
-              const ts = Math.round((t.duration % 60000) / 1000);
-              const tdur = tm > 0 ? `${tm}m ${ts}s` : `${ts}s`;
-              lines.push(`- ${emoji} **${t.title}** — \`${tdur}\``);
-              if (t.error) lines.push(`  > \`${t.error.split('\n')[0].slice(0, 120)}\``);
-            }
-          }
+          const summary = `
+          ## ${titleEmoji} Foleon E2E Test Results
 
-          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          | | Count |
+          |:--|--:|
+          | ✅ Passed | **${r.passed}** |
+          | ❌ Failed | **${r.failed}** |
+          | ⏭️ Skipped | **${skipped}** |
+          | 🔢 Total | **${r.total}** |
+          | 🎯 Pass rate | **${passRate}%** |
+          | ⏱️ Duration | **${dur}** |
+
+          ---
+
+          ### Test Details
+
+          <table>
+          <thead><tr><th>Result</th><th>Test</th><th align="right">Duration</th></tr></thead>
+          <tbody>
+          ${rows}
+          </tbody>
+          </table>
+          `;
+
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary + '\n');
           JSEOF
 
       - name: Build Slack payload
