@@ -121,6 +121,9 @@ jobs:
           RUN_NUMBER: ${{ github.run_number }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           BRANCH: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          TRIGGER: ${{ github.event_name }}
         run: |
           cat > build-payload.js << 'JSEOF'
           const fs = require('fs');
@@ -136,54 +139,63 @@ jobs:
           const s = Math.round((r.duration % 60000) / 1000);
           const dur = m > 0 ? `${m}m ${s}s` : `${s}s`;
 
-          const tests = r.suites.flatMap(suite => suite.tests.map(t => {
-            const emoji = t.status === 'passed' ? '✅' : t.status === 'skipped' ? '⏭' : '❌';
-            const tm = Math.floor(t.duration / 60000);
-            const ts = Math.round((t.duration % 60000) / 1000);
-            const tdur = tm > 0 ? `${tm}m ${ts}s` : `${ts}s`;
-            const title = t.title.length > 72 ? t.title.slice(0, 69) + '...' : t.title;
-            return `${emoji} ${title}  \`${tdur}\``;
-          }));
-
+          const skipped = r.suites.flatMap(s => s.tests).filter(t => t.status === 'skipped').length;
           const resultEmoji = r.failed === 0 ? '✅' : '❌';
-          const resultTitle = r.failed === 0 ? 'All tests passed' : `${r.failed} test(s) failed`;
+          const resultLabel = r.failed === 0 ? 'SUCCESS' : 'FAILURE';
+          const shortSha = (process.env.COMMIT_SHA || '').slice(0, 7);
 
-          const payload = {
-            blocks: [
+          const statsLine = `✅ *${r.passed}/${r.total} passed* • ❌ *${r.failed} failed* • ⏭️ *${skipped} skipped* • ⏱️ *${dur}*`;
+
+          const blocks = [
+            {
+              type: 'section',
+              text: { type: 'mrkdwn', text: `*${resultEmoji} Foleon E2E — ${resultLabel}*` }
+            },
+            {
+              type: 'section',
+              text: { type: 'mrkdwn', text: statsLine }
+            },
+          ];
+
+          if (r.failed > 0) {
+            const failedTests = r.suites.flatMap(suite => suite.tests)
+              .filter(t => t.status === 'failed')
+              .map(t => {
+                const tm = Math.floor(t.duration / 60000);
+                const ts = Math.round((t.duration % 60000) / 1000);
+                const tdur = tm > 0 ? `${tm}m ${ts}s` : `${ts}s`;
+                const title = t.title.length > 80 ? t.title.slice(0, 77) + '...' : t.title;
+                return `❌ ${title} _(${tdur})_`;
+              });
+            blocks.push({
+              type: 'section',
+              text: { type: 'mrkdwn', text: `*Failed Tests*\n${failedTests.join('\n')}` }
+            });
+          }
+
+          blocks.push({
+            type: 'context',
+            elements: [
               {
-                type: 'header',
-                text: { type: 'plain_text', text: `${resultEmoji} Foleon E2E — Run #${process.env.RUN_NUMBER}` }
-              },
-              {
-                type: 'section',
-                fields: [
-                  { type: 'mrkdwn', text: `*Result*\n${resultTitle}` },
-                  { type: 'mrkdwn', text: `*Duration*\n${dur}` },
-                  { type: 'mrkdwn', text: `*Passed*\n${r.passed} / ${r.total}` },
-                  { type: 'mrkdwn', text: `*Branch*\n${process.env.BRANCH}` },
-                ]
-              },
-              { type: 'divider' },
-              {
-                type: 'section',
-                text: { type: 'mrkdwn', text: '*Test Results*\n' + tests.join('\n') }
-              },
-              { type: 'divider' },
-              {
-                type: 'actions',
-                elements: [
-                  {
-                    type: 'button',
-                    style: 'primary',
-                    text: { type: 'plain_text', text: 'View Run & Report →' },
-                    url: process.env.RUN_URL
-                  }
-                ]
+                type: 'mrkdwn',
+                text: `Branch: \`${process.env.BRANCH}\` • Commit: \`${shortSha}\` — By: ${process.env.ACTOR} • Trigger: ${process.env.TRIGGER}`
               }
             ]
-          };
+          });
 
-          fs.writeFileSync('slack-payload.json', JSON.stringify(payload));
+          blocks.push({
+            type: 'actions',
+            elements: [
+              {
+                type: 'button',
+                style: r.failed === 0 ? 'primary' : 'danger',
+                text: { type: 'plain_text', text: 'View Run →' },
+                url: process.env.RUN_URL
+              }
+            ]
+          });
+
+          fs.writeFileSync('slack-payload.json', JSON.stringify({ blocks }));
           console.log('Slack payload built successfully');
           JSEOF
           node build-payload.js
