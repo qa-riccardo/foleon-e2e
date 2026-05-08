@@ -58,6 +58,51 @@ jobs:
           path: test-results/
           retention-days: 7
 
+      - name: Write job summary
+        if: always()
+        run: |
+          node << 'JSEOF'
+          const fs = require('fs');
+          const dir = 'custom-report/runs';
+          if (!fs.existsSync(dir)) process.exit(0);
+          const files = fs.readdirSync(dir)
+            .filter(f => f.endsWith('.json') && !f.startsWith('.'))
+            .sort().reverse();
+          if (!files.length) process.exit(0);
+
+          const r = JSON.parse(fs.readFileSync(dir + '/' + files[0], 'utf8'));
+          const m = Math.floor(r.duration / 60000);
+          const s = Math.round((r.duration % 60000) / 1000);
+          const dur = m > 0 ? `${m}m ${s}s` : `${s}s`;
+
+          const statusEmoji = r.failed === 0 ? '✅' : '❌';
+          const lines = [
+            `## ${statusEmoji} Foleon E2E — Run Results`,
+            '',
+            `| | |`,
+            `|---|---|`,
+            `| **Result** | ${r.failed === 0 ? '✅ All tests passed' : `❌ ${r.failed} failed`} |`,
+            `| **Passed** | ${r.passed} / ${r.total} |`,
+            `| **Duration** | ${dur} |`,
+            '',
+            '### Tests',
+            '',
+          ];
+
+          for (const suite of r.suites) {
+            for (const t of suite.tests) {
+              const emoji = t.status === 'passed' ? '✅' : t.status === 'skipped' ? '⏭' : '❌';
+              const tm = Math.floor(t.duration / 60000);
+              const ts = Math.round((t.duration % 60000) / 1000);
+              const tdur = tm > 0 ? `${tm}m ${ts}s` : `${ts}s`;
+              lines.push(`- ${emoji} **${t.title}** — \`${tdur}\``);
+              if (t.error) lines.push(`  > \`${t.error.split('\n')[0].slice(0, 120)}\``);
+            }
+          }
+
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          JSEOF
+
       - name: Build Slack payload
         if: always()
         env:
