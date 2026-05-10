@@ -10,7 +10,7 @@
     "test:auth": "playwright test tests/auth/",
     "test:editor": "playwright test tests/editor/",
     "report": "playwright show-report",
-    "report:full": "open custom-report/index.html",
+    "report:full": "node custom-report/serve.js",
     "report:serve": "node custom-report/serve.js",
     "report:rebuild": "npx tsx scripts/rebuild-report.ts",
     "codegen": "playwright codegen https://app.foleon.com"
