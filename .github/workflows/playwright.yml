@@ -26,12 +26,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Restore run history
+        uses: actions/cache/restore@v4
+        with:
+          path: custom-report/runs
+          key: run-history-never-matches
+          restore-keys: |
+            run-history-
+
       - name: Run tests
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
           USER_EMAIL: ${{ secrets.USER_EMAIL }}
           USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
         run: npm test
+
+      - name: Save run history
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: custom-report/runs
+          key: run-history-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload Playwright report
         if: always()
@@ -48,6 +63,10 @@ jobs:
           name: custom-report-${{ github.run_number }}
           path: custom-report/
           retention-days: 30
+
+      - name: Copy test results into report for Pages
+        if: always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: cp -r test-results custom-report/test-results || true
 
       - name: Upload Pages artifact
         if: always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
