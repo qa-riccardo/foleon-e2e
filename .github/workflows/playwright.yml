@@ -183,10 +183,20 @@ jobs:
 
           const statsLine = `✅ *${r.passed}/${r.total} passed* • ❌ *${r.failed} failed* • ⏭️ *${skipped} skipped* • ⏱️ *${dur}*`;
 
+          const statusImage = r.failed === 0
+            ? 'https://raw.githubusercontent.com/qa-riccardo/foleon-e2e/main/assets/ok.png'
+            : 'https://raw.githubusercontent.com/qa-riccardo/foleon-e2e/main/assets/ko.png';
+          const statusImageAlt = r.failed === 0 ? 'Tests passed' : 'Tests failed';
+
           const blocks = [
             {
               type: 'section',
               text: { type: 'mrkdwn', text: `*${resultEmoji} Foleon E2E — ${resultLabel}*` }
+            },
+            {
+              type: 'image',
+              image_url: statusImage,
+              alt_text: statusImageAlt
             },
             {
               type: 'section',
