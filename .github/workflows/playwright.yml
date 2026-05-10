@@ -230,7 +230,8 @@ jobs:
             ]
           });
 
-          fs.writeFileSync('slack-payload.json', JSON.stringify({ blocks }));
+          const color = r.failed === 0 ? '#2EB67D' : '#E01E5A';
+          fs.writeFileSync('slack-payload.json', JSON.stringify({ attachments: [{ color, blocks }] }));
           console.log('Slack payload built successfully');
           JSEOF
           node build-payload.js
