@@ -222,23 +222,13 @@ jobs:
           JSEOF
           node build-payload.js
 
-      - name: Notify Slack
+      - name: Upload Slack payload
         if: always()
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        run: |
-          if [ -z "$SLACK_WEBHOOK_URL" ]; then
-            echo "SLACK_WEBHOOK_URL not set — skipping"
-            exit 0
-          fi
-          if [ ! -f slack-payload.json ]; then
-            echo "No payload file — skipping"
-            exit 0
-          fi
-          echo "Sending Slack notification..."
-          curl -f -X POST "$SLACK_WEBHOOK_URL" \
-            -H 'Content-type: application/json' \
-            --data @slack-payload.json
+        uses: actions/upload-artifact@v4
+        with:
+          name: slack-payload
+          path: slack-payload.json
+          if-no-files-found: ignore
 
   deploy:
     name: Deploy Report to Pages
@@ -255,3 +245,25 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Download Slack payload
+        uses: actions/download-artifact@v4
+        with:
+          name: slack-payload
+
+      - name: Notify Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL not set — skipping"
+            exit 0
+          fi
+          if [ ! -f slack-payload.json ]; then
+            echo "No payload file — skipping"
+            exit 0
+          fi
+          echo "Sending Slack notification..."
+          curl -f -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-type: application/json' \
+            --data @slack-payload.json
