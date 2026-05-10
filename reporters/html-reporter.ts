@@ -370,10 +370,11 @@ html,body { margin:0; font-family:var(--ff-body); font-size:15px; line-height:1.
 .runhist-col { display:flex; flex-direction:column; align-items:stretch; height:100%; }
 .runhist-col .stack { flex:1; display:flex; flex-direction:column; justify-content:flex-end; gap:2px; }
 .runhist-col .pass-seg { background:var(--pass); border-radius:4px 4px 0 0; }
-.runhist-col .fail-seg { background:var(--fail); min-height:0; }
+.runhist-col .fail-seg { background:var(--fail); border-radius:4px 4px 0 0; min-height:0; }
 .runhist-col.current .pass-seg { box-shadow:0 0 0 2px var(--foleon-blue),0 0 0 4px rgba(0,26,69,0.06); }
-.runhist-foot { display:grid; grid-template-columns:repeat(10,1fr); gap:8px; font-family:var(--ff-mono); font-size:10px; text-align:center; color:var(--fg-muted); padding-top:8px; border-top:1px solid var(--border); }
+.runhist-foot { display:grid; grid-template-columns:repeat(10,1fr); gap:8px; font-family:var(--ff-mono); font-size:10px; text-align:center; color:var(--fg-muted); padding-top:8px; border-top:1px solid var(--border); line-height:1.6; }
 .runhist-foot span.now { color:var(--foleon-accent); font-weight:600; }
+.runhist-foot .time { font-size:9px; opacity:0.7; }
 .runhist-legend { display:flex; gap:16px; font-family:var(--ff-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--fg-muted); margin-top:12px; }
 .runhist-legend span { display:inline-flex; align-items:center; gap:6px; }
 .runhist-legend i { width:8px; height:8px; border-radius:2px; display:inline-block; }
@@ -890,18 +891,19 @@ function renderTrendChart(runs: RunEntry[], currentRunId: string): string {
     const isCurrent = r.id === currentRunId;
     const d = new Date(r.startTime);
     const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', timeZone: 'Europe/Rome' });
-    return { r, passRate, failRate, isCurrent, label };
+    const timeLabel = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' });
+    return { r, passRate, failRate, isCurrent, label, timeLabel };
   });
 
   const colsHtml = cols.map(c => `
     <div class="runhist-col${c.isCurrent ? ' current' : ''}">
       <div class="stack">
         ${c.failRate > 0 ? `<div class="fail-seg" style="height:${Math.round(c.failRate * 100)}%"></div>` : ''}
-        <div class="pass-seg" style="height:${Math.max(4, Math.round(c.passRate * 100))}%"></div>
+        ${c.passRate > 0 ? `<div class="pass-seg" style="height:${Math.round(c.passRate * 100)}%"></div>` : ''}
       </div>
     </div>`).join('');
 
-  const footHtml = cols.map(c => `<span class="${c.isCurrent ? 'now' : ''}">${c.label}</span>`).join('');
+  const footHtml = cols.map(c => `<span class="${c.isCurrent ? 'now' : ''}">${c.label}<br/><span class="time">${c.timeLabel}</span></span>`).join('');
 
   return `<div class="panel">
     <div class="panel-head"><h3>Run history</h3></div>
@@ -1312,7 +1314,10 @@ http.createServer((req,res)=>{
     if(err){res.writeHead(404);res.end('Not found');return;}
     res.writeHead(200,{'Content-Type':MIME[path.extname(fp)]||'application/octet-stream'});res.end(data);
   });
-}).listen(port,()=>console.log('Quality Report → http://localhost:'+port));
+}).listen(port,()=>{
+  console.log('Quality Report → http://localhost:'+port);
+  require('child_process').exec('open http://localhost:'+port);
+});
 `;
   fs.writeFileSync(path.join(outDir, 'serve.js'), content, 'utf8');
 }
