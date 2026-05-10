@@ -1152,7 +1152,7 @@ function renderRunPane(run: RunEntry, isFirst: boolean, allRuns: RunEntry[] = []
       <div class="kpi"><div class="kpi-label">Total tests</div><div class="kpi-value">${run.total}</div><div class="kpi-foot">${suiteCount} suite${suiteCount !== 1 ? 's' : ''} executed</div></div>
       <div class="kpi pass"><div class="kpi-label">Passed</div><div class="kpi-value">${run.passed}</div><div class="kpi-foot">All assertions verified</div></div>
       <div class="kpi${run.failed > 0 ? ' fail' : ''}"><div class="kpi-label">Failed</div><div class="kpi-value">${run.failed}</div><div class="kpi-foot">${run.failed > 0 ? 'Failures detected' : 'No regressions'}</div></div>
-      <div class="kpi"><div class="kpi-label">Duration</div><div class="kpi-value" style="font-size:${durationDisplay.length > 5 ? '36px' : '56px'}">${esc(durationDisplay)}</div><div class="kpi-foot">Wall clock time</div></div>
+      <div class="kpi"><div class="kpi-label">Duration</div><div class="kpi-value" style="font-size:${durationDisplay.length > 8 ? '36px' : '56px'}">${esc(durationDisplay)}</div><div class="kpi-foot">Test execution time</div></div>
       <div class="kpi kpi-rate ${passRate === 100 ? 'pass-rate' : 'fail-rate'}">
         <div class="kpi-label">Pass rate</div>
         <div class="kpi-value">${passRate}<span class="unit">%</span></div>
@@ -1366,7 +1366,6 @@ class FoleonHTMLReporter implements Reporter {
   }
 
   onEnd(_result: FullResult) {
-    const duration = Date.now() - this.startTime.getTime();
     const out = path.resolve(process.cwd(), this.outputFile);
     const outDir = path.dirname(out);
     const runsDir = path.join(outDir, 'runs');
@@ -1374,6 +1373,7 @@ class FoleonHTMLReporter implements Reporter {
 
     // Compute stats for this run
     const all = this.suites.flatMap(s => s.tests);
+    const duration = all.reduce((sum, t) => sum + t.duration, 0);
     const passed = all.filter(t => t.status === 'passed').length;
     const failed = all.filter(t => !['passed', 'skipped'].includes(t.status)).length;
     const id = this.startTime.toISOString().replace(/[:.]/g, '-');
