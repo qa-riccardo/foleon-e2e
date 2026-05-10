@@ -200,7 +200,7 @@ jobs:
               const ts = Math.round((t.duration % 60000) / 1000);
               const tdur = tm > 0 ? `${tm}m ${ts}s` : `${ts}s`;
               const emoji = t.status === 'passed' ? '✅' : t.status === 'skipped' ? '⏭️' : '❌';
-              const title = t.title.length > 80 ? t.title.slice(0, 77) + '...' : t.title;
+              const title = t.title.length > 55 ? t.title.slice(0, 52) + '...' : t.title;
               return `${emoji} ${title} _(${tdur})_`;
             });
           blocks.push({
