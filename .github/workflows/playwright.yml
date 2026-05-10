@@ -49,6 +49,12 @@ jobs:
           path: custom-report/
           retention-days: 30
 
+      - name: Upload Pages artifact
+        if: always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: custom-report/
+
       - name: Upload test results (traces & videos)
         if: always()
         uses: actions/upload-artifact@v4
@@ -216,3 +222,19 @@ jobs:
           curl -f -X POST "$SLACK_WEBHOOK_URL" \
             -H 'Content-type: application/json' \
             --data @slack-payload.json
+
+  deploy:
+    name: Deploy Report to Pages
+    needs: test
+    if: always() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
