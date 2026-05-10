@@ -1328,6 +1328,7 @@ class FoleonHTMLReporter implements Reporter {
   private outputFile: string;
   private suites: SuiteData[] = [];
   private startTime = new Date();
+  private testIndex = new Map<string, { suite: SuiteData; idx: number }>();
 
   constructor(options: { outputFile?: string } = {}) {
     this.outputFile = options.outputFile ?? 'custom-report/index.html';
@@ -1363,7 +1364,7 @@ class FoleonHTMLReporter implements Reporter {
       }
     }
 
-    suite.tests.push({
+    const entry = {
       title: test.title,
       status: result.status,
       duration: result.duration,
@@ -1372,7 +1373,16 @@ class FoleonHTMLReporter implements Reporter {
       videoPath,
       error: result.error?.message,
       tags: test.tags ?? [],
-    });
+    };
+
+    const existing = this.testIndex.get(test.id);
+    if (existing) {
+      existing.suite.tests[existing.idx] = entry;
+    } else {
+      const idx = suite.tests.length;
+      suite.tests.push(entry);
+      this.testIndex.set(test.id, { suite, idx });
+    }
   }
 
   onEnd(_result: FullResult) {
