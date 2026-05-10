@@ -12,6 +12,7 @@
     "report": "playwright show-report",
     "report:full": "open custom-report/index.html",
     "report:serve": "node custom-report/serve.js",
+    "report:rebuild": "npx tsx scripts/rebuild-report.ts",
     "codegen": "playwright codegen https://app.foleon.com"
   },
   "devDependencies": {
