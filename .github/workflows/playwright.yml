@@ -181,6 +181,7 @@ jobs:
           const resultLabel = r.failed === 0 ? 'READY TO RELEASE' : 'FAILURE';
           const shortSha = (process.env.COMMIT_SHA || '').slice(0, 7);
 
+          const reportUrl = 'https://qa-riccardo.github.io/foleon-e2e/';
           const statsLine = `✅ *${r.passed}/${r.total} passed* • ❌ *${r.failed} failed* • ⏭️ *${skipped} skipped* • ⏱️ *${dur}*`;
 
           const statusImage = r.failed === 0
@@ -201,6 +202,17 @@ jobs:
             {
               type: 'section',
               text: { type: 'mrkdwn', text: statsLine }
+            },
+            {
+              type: 'actions',
+              elements: [
+                {
+                  type: 'button',
+                  style: r.failed === 0 ? 'primary' : 'danger',
+                  text: { type: 'plain_text', text: 'View report' },
+                  url: reportUrl
+                }
+              ]
             },
           ];
 
@@ -224,18 +236,6 @@ jobs:
               {
                 type: 'mrkdwn',
                 text: `Branch: \`${process.env.BRANCH}\` • Commit: \`${shortSha}\` — By: ${process.env.ACTOR} • Trigger: ${process.env.TRIGGER}`
-              }
-            ]
-          });
-
-          blocks.push({
-            type: 'actions',
-            elements: [
-              {
-                type: 'button',
-                style: r.failed === 0 ? 'primary' : 'danger',
-                text: { type: 'plain_text', text: 'View report' },
-                url: 'https://qa-riccardo.github.io/foleon-e2e/'
               }
             ]
           });
