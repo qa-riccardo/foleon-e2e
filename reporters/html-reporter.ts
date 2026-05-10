@@ -1249,6 +1249,10 @@ function buildMultiRunHTML(runs: RunEntry[]): string {
     </div>
   </div>
   <div class="topbar-right">
+    <a class="topbar-pill" href="https://github.com/qa-riccardo/foleon-e2e/actions/workflows/playwright.yml" target="_blank" rel="noopener" style="text-decoration:none">
+      <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
+      Run tests
+    </a>
     <div class="run-hist-wrap">
       <button class="topbar-pill run-hist-btn" onclick="window.toggleRunHistory()">
         ${clockIcon} Run history <span class="count run-hist-ct">${limited.length}</span>
