@@ -1,6 +1,8 @@
 name: Playwright E2E Tests
 
 on:
+  schedule:
+    - cron: '15 16 * * *'  # 18:15 CEST (UTC+2) — in inverno diventa 17:15 CET
   push:
     branches: [main]
   pull_request:
