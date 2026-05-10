@@ -887,7 +887,7 @@ function renderTrendChart(runs: RunEntry[], currentRunId: string): string {
     const failRate = r.total ? r.failed / r.total : 0;
     const isCurrent = r.id === currentRunId;
     const d = new Date(r.startTime);
-    const label = `${d.getDate()}/${d.getMonth() + 1}`;
+    const label = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric', timeZone: 'Europe/Rome' });
     return { r, passRate, failRate, isCurrent, label };
   });
 
@@ -1095,10 +1095,11 @@ function renderRunPane(run: RunEntry, isFirst: boolean, allRuns: RunEntry[] = []
   const overallFailed = run.failed > 0;
 
   const d = new Date(run.startTime);
-  const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const tz = { timeZone: 'Europe/Rome' } as const;
+  const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', ...tz });
+  const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', ...tz });
   const fullDateStr = d.toLocaleString('en-GB', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', ...tz,
   });
 
   const signals = deriveSignals(run.suites);
@@ -1287,7 +1288,7 @@ ${panesHtml}
 
 function generateServeJs(outDir: string): void {
   const content = `const http=require('http'),fs=require('fs'),path=require('path');
-const dir=__dirname,runsDir=path.join(dir,'runs'),port=process.env.PORT||4000;
+const dir=path.dirname(__dirname),runsDir=path.join(__dirname,'runs'),port=process.env.PORT||4000;
 const MIME={'.html':'text/html','.js':'text/javascript','.json':'application/json','.webm':'video/webm','.mp4':'video/mp4','.png':'image/png'};
 http.createServer((req,res)=>{
   res.setHeader('Access-Control-Allow-Origin','*');
@@ -1300,7 +1301,7 @@ http.createServer((req,res)=>{
     if(!h.includes(id)){h.push(id);fs.writeFileSync(hf,JSON.stringify(h));}
     res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:true}));return;
   }
-  const fp=path.join(dir,req.url==='/'?'index.html':req.url.split('?')[0]);
+  const fp=path.join(dir,req.url==='/'?'custom-report/index.html':req.url.split('?')[0]);
   if(!fp.startsWith(dir)){res.writeHead(403);res.end();return;}
   fs.readFile(fp,(err,data)=>{
     if(err){res.writeHead(404);res.end('Not found');return;}
@@ -1347,7 +1348,7 @@ class FoleonHTMLReporter implements Reporter {
         const size = fs.statSync(att.path).size;
         if (size > videoMaxSize) {
           videoMaxSize = size;
-          videoPath = path.relative(outDir, att.path);
+          videoPath = path.relative(path.dirname(outDir), att.path);
         }
       }
     }
