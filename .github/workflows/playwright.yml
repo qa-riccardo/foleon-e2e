@@ -45,7 +45,7 @@ jobs:
           if [ -z "$SLACK_WEBHOOK_URL" ]; then exit 0; fi
           curl -s -X POST "$SLACK_WEBHOOK_URL" \
             -H 'Content-type: application/json' \
-            -d "{\"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*🚀 Foleon E2E — tests started*\"}},{\"type\":\"context\",\"elements\":[{\"type\":\"mrkdwn\",\"text\":\"Branch: \`${BRANCH}\` • By: ${ACTOR} • Trigger: ${TRIGGER}\"}]},{\"type\":\"actions\",\"elements\":[{\"type\":\"button\",\"text\":{\"type\":\"plain_text\",\"text\":\"View run →\"},\"url\":\"${RUN_URL}\"}]}]}"
+            -d "{\"username\":\"Sentinel\",\"icon_url\":\"https://raw.githubusercontent.com/qa-riccardo/foleon-e2e/main/assets/sentinel.jpeg\",\"blocks\":[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"*🚀 Foleon E2E — tests started*\"}},{\"type\":\"context\",\"elements\":[{\"type\":\"mrkdwn\",\"text\":\"Branch: \`${BRANCH}\` • By: ${ACTOR} • Trigger: ${TRIGGER}\"}]},{\"type\":\"actions\",\"elements\":[{\"type\":\"button\",\"text\":{\"type\":\"plain_text\",\"text\":\"View run →\"},\"url\":\"${RUN_URL}\"}]}]}"
 
       - name: Run tests
         env:
@@ -231,7 +231,9 @@ jobs:
           });
 
           const color = r.failed === 0 ? '#2EB67D' : '#E01E5A';
-          fs.writeFileSync('slack-payload.json', JSON.stringify({ attachments: [{ color, blocks }] }));
+          const username = 'Sentinel';
+          const icon_url = 'https://raw.githubusercontent.com/qa-riccardo/foleon-e2e/main/assets/sentinel.jpeg';
+          fs.writeFileSync('slack-payload.json', JSON.stringify({ username, icon_url, attachments: [{ color, blocks }] }));
           console.log('Slack payload built successfully');
           JSEOF
           node build-payload.js
