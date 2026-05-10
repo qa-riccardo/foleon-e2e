@@ -181,21 +181,19 @@ jobs:
             },
           ];
 
-          if (r.failed > 0) {
-            const failedTests = r.suites.flatMap(suite => suite.tests)
-              .filter(t => t.status === 'failed')
-              .map(t => {
-                const tm = Math.floor(t.duration / 60000);
-                const ts = Math.round((t.duration % 60000) / 1000);
-                const tdur = tm > 0 ? `${tm}m ${ts}s` : `${ts}s`;
-                const title = t.title.length > 80 ? t.title.slice(0, 77) + '...' : t.title;
-                return `❌ ${title} _(${tdur})_`;
-              });
-            blocks.push({
-              type: 'section',
-              text: { type: 'mrkdwn', text: `*Failed Tests*\n${failedTests.join('\n')}` }
+          const allTestLines = r.suites.flatMap(suite => suite.tests)
+            .map(t => {
+              const tm = Math.floor(t.duration / 60000);
+              const ts = Math.round((t.duration % 60000) / 1000);
+              const tdur = tm > 0 ? `${tm}m ${ts}s` : `${ts}s`;
+              const emoji = t.status === 'passed' ? '✅' : t.status === 'skipped' ? '⏭️' : '❌';
+              const title = t.title.length > 80 ? t.title.slice(0, 77) + '...' : t.title;
+              return `${emoji} ${title} _(${tdur})_`;
             });
-          }
+          blocks.push({
+            type: 'section',
+            text: { type: 'mrkdwn', text: `*Tests*\n${allTestLines.join('\n')}` }
+          });
 
           blocks.push({
             type: 'context',
@@ -213,8 +211,8 @@ jobs:
               {
                 type: 'button',
                 style: r.failed === 0 ? 'primary' : 'danger',
-                text: { type: 'plain_text', text: 'View Run →' },
-                url: process.env.RUN_URL
+                text: { type: 'plain_text', text: 'View report' },
+                url: 'https://qa-riccardo.github.io/foleon-e2e/'
               }
             ]
           });
