@@ -140,8 +140,7 @@ test.describe('Brand Kits', () => {
     });
 
     await test.step('Module Editor: open Module Brand Kit and verify Brand Kit colors and font', async () => {
-      await brandKitPage.navigateToModules();
-      const moduleEditorPage = await brandKitPage.hoverAndEditModule('Module Brand Kit');
+      const moduleEditorPage = await brandKitPage.openModuleByUrl('https://editor.acceptance.foleon.cloud/module/86');
       await brandKitPage.expectDocSectionIsLightGreen(moduleEditorPage);
       await brandKitPage.expectDocHeader1IsOrange(moduleEditorPage);
       await brandKitPage.expectDocHeader1IsLucidaSansUnicode(moduleEditorPage);
