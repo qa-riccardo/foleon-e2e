@@ -98,8 +98,10 @@ export class BrandKitPage extends BasePage {
   readonly modalNameInput = this.page.getByTestId('modal-container').getByRole('textbox');
   readonly modalSaveButton = this.page.getByTestId('modal-container').getByRole('button', { name: 'Save' });
 
-  // Left-panel project navigation (shown after saving a Brand Kit)
-  readonly projectNavItem = this.page.getByRole('link', { name: 'Projects' });
+  // Delete flow (brand kit list)
+  readonly deleteBrandKitDialog = this.page.getByRole('dialog', { name: 'Delete Brand Kit' });
+  readonly deleteMenuItem = this.page.getByRole('menuitem', { name: 'Delete' });
+  readonly emptyStateHeading = this.page.getByRole('heading', { name: 'Create your first Brand Kit' });
 
   // Project list — "Start new Foleon Doc" button (top-right corner of project view)
   readonly startNewFoleonDocButton = this.page.getByRole('button', { name: 'Start new Foleon Doc' }).first();
@@ -124,8 +126,11 @@ export class BrandKitPage extends BasePage {
   readonly previewButton = this.page.getByTestId('button-preview');
 
   // Left-panel workspace-level nav links, scoped to /workspace/ path to avoid Brand Console duplicates
+  readonly projectNavItem = this.page.locator('a[href*="/workspace/"][href$="/project"]');
   readonly templatesNavItem = this.page.locator('a[href*="/workspace/"][href$="/template"]');
   readonly modulesNavItem = this.page.locator('a[href*="/workspace/"][href$="/module"]');
+
+  private workspaceBaseUrl: string | null = null;
 
   constructor(page: Page) {
     super(page);
@@ -135,6 +140,8 @@ export class BrandKitPage extends BasePage {
     await super.goto('/');
     await this.brandKitNavButton.click();
     await this.createButton.waitFor({ state: 'visible' });
+    const href = await this.projectNavItem.getAttribute('href');
+    if (href) this.workspaceBaseUrl = href.replace(/\/[^/]+$/, '');
   }
 
   async openSwatchColorPicker(swatch: Locator) {
@@ -385,8 +392,12 @@ export class BrandKitPage extends BasePage {
   }
 
   async navigateToTemplates() {
-    await super.goto('/');
-    await this.templatesNavItem.click();
+    if (this.workspaceBaseUrl) {
+      await this.page.goto(this.workspaceBaseUrl + '/template');
+    } else {
+      await super.goto('/');
+      await this.templatesNavItem.click();
+    }
   }
 
   async navigateToModules() {
@@ -405,7 +416,7 @@ export class BrandKitPage extends BasePage {
     await editorPage.getByTestId('@foleon/maggie-viewer_section-component').waitFor({ state: 'visible' });
     return editorPage;
   }
-  
+
   async openModuleByUrl(url: string): Promise<Page> {
     const editorPage = await this.page.context().newPage();
     await editorPage.goto(url);
@@ -430,8 +441,36 @@ export class BrandKitPage extends BasePage {
       row.getByRole('link', { name: 'Edit' }).click(),
     ]);
     await editorPage.waitForLoadState('domcontentloaded');
-    await editorPage.getByTestId('@foleon/maggie-viewer_section-component').waitFor({ state: 'visible' });
+    const viewer = editorPage.getByTestId('@foleon/maggie-viewer_section-component');
+    try {
+      await viewer.waitFor({ state: 'visible', timeout: 20_000 });
+    } catch {
+      // Module editor stuck on loading — reload once and retry
+      await editorPage.reload();
+      await editorPage.waitForLoadState('domcontentloaded');
+      await viewer.waitFor({ state: 'visible' });
+    }
     return editorPage;
+  }
+
+  async deleteAllBrandKits() {
+    while (true) {
+      await this.page.reload();
+
+      // Wait until the page shows either the empty state or at least one row
+      await Promise.any([
+        this.emptyStateHeading.waitFor({ state: 'visible', timeout: 15_000 }),
+        this.page.getByTestId('action-menu-button').first().waitFor({ state: 'visible', timeout: 15_000 }),
+      ]);
+
+      if (await this.emptyStateHeading.isVisible()) break;
+
+      await this.page.getByTestId('action-menu-button').first().click();
+      await expect(this.deleteMenuItem).toBeVisible();
+      await this.deleteMenuItem.click();
+      await this.deleteBrandKitDialog.getByRole('button', { name: 'Confirm' }).click();
+      await this.deleteBrandKitDialog.waitFor({ state: 'hidden' });
+    }
   }
 
   async switchTab(tab: ThemeTab) {
