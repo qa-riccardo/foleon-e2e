@@ -405,6 +405,21 @@ export class BrandKitPage extends BasePage {
     await editorPage.getByTestId('@foleon/maggie-viewer_section-component').waitFor({ state: 'visible' });
     return editorPage;
   }
+  
+  async openModuleByUrl(url: string): Promise<Page> {
+    const editorPage = await this.page.context().newPage();
+    await editorPage.goto(url);
+    await editorPage.waitForLoadState('domcontentloaded');
+    const viewer = editorPage.getByTestId('@foleon/maggie-viewer_section-component');
+    try {
+      await viewer.waitFor({ state: 'visible', timeout: 20_000 });
+    } catch {
+      await editorPage.reload();
+      await editorPage.waitForLoadState('domcontentloaded');
+      await viewer.waitFor({ state: 'visible' });
+    }
+    return editorPage;
+  }
 
   // Module Edit is a link (not a button like Templates)
   async hoverAndEditModule(moduleName: string): Promise<Page> {
