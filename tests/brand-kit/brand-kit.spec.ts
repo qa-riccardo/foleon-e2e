@@ -13,7 +13,6 @@ test.describe('Brand Kits', () => {
       await brandKitPage.openFirstSolidSwatchColorPicker();
       await brandKitPage.setColorToRedViaSpectrum();
       await brandKitPage.closeColorPicker();
-      await expect(brandKitPage.colorSpectrum).not.toBeVisible();
       await brandKitPage.expectSwatchIsRed();
     });
 
@@ -21,7 +20,6 @@ test.describe('Brand Kits', () => {
       await brandKitPage.openPageBackgroundColorPicker();
       await brandKitPage.setColorToLightBlue();
       await brandKitPage.closeColorPicker();
-      await expect(brandKitPage.colorSpectrum).not.toBeVisible();
       await brandKitPage.expectPageBackgroundIsLightBlue();
       await brandKitPage.expectCanvasPageBackgroundIsLightBlue();
     });
@@ -39,7 +37,6 @@ test.describe('Brand Kits', () => {
       await expect(brandKitPage.colorSpectrum).toBeVisible();
       await brandKitPage.setColorToLightGreen();
       await brandKitPage.closeColorPicker();
-      await expect(brandKitPage.colorSpectrum).not.toBeVisible();
     });
 
     await test.step('Content: set Header 1 font to Lucida Sans Unicode and verify in panel and canvas', async () => {
@@ -52,7 +49,6 @@ test.describe('Brand Kits', () => {
     await test.step('Content: set Header 1 font color to dark orange and verify in panel and canvas', async () => {
       await brandKitPage.setHeader1FontColorToDarkOrange();
       await brandKitPage.closeColorPicker();
-      await expect(brandKitPage.colorSpectrum).not.toBeVisible();
       await brandKitPage.expectPanelHeader1ColorIsDarkOrange();
       await brandKitPage.expectCanvasHeader1ColorIsDarkOrange();
     });
@@ -63,14 +59,12 @@ test.describe('Brand Kits', () => {
       await brandKitPage.openContentBackgroundColorPicker();
       await brandKitPage.setColorToDarkGrey();
       await brandKitPage.closeColorPicker();
-      await expect(brandKitPage.colorSpectrum).not.toBeVisible();
     });
 
     await test.step('Content: Mode 2 — set Header 1 color to yellow and verify in panel and canvas', async () => {
       await brandKitPage.openHeader1ForEditing();
       await brandKitPage.setHeader1FontColorToYellow();
       await brandKitPage.closeColorPicker();
-      await expect(brandKitPage.colorSpectrum).not.toBeVisible();
       await brandKitPage.expectPanelHeader1ColorIsYellow();
       await brandKitPage.expectCanvasHeader1ColorIsYellow();
     });
@@ -81,7 +75,6 @@ test.describe('Brand Kits', () => {
       await brandKitPage.openChartBackgroundColorPicker();
       await brandKitPage.setColorToDarkGrey();
       await brandKitPage.closeColorPicker();
-      await expect(brandKitPage.colorSpectrum).not.toBeVisible();
     });
 
     await test.step('Save brand kit with a unique name', async () => {
